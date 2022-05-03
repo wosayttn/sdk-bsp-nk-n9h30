@@ -1,0 +1,12 @@
+[
+ {
+  "path": "/packages/multimedia/LVGL/LVGL", 
+  "ver": "v8.2.0", 
+  "name": "LVGL"
+ }, 
+ {
+  "path": "/packages/system/ramdisk", 
+  "ver": "latest", 
+  "name": "RAMDISK"
+ }
+]
