@@ -13,7 +13,7 @@ board:
   sale_contact_cn: https://www.nuvoton.com
   sale_contact_global: https://www.nuvoton.com
   small_image: documents/images/small.png
-  vendor: Nuvoton technology corporation
+  vendor: Nuvoton
   version: v1.0
 chip:
   chip_name: N9H30F61IEC
@@ -84,7 +84,6 @@ template_projects:
     - libraries
     - rtconfig.py
     - template.uvproj
-    - template.uvprojx
     source_path_offset: project_0
     target_path_offset: ''
   external_files:
