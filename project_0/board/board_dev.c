@@ -173,6 +173,11 @@ int rt_hw_nau8822_port(void)
 INIT_COMPONENT_EXPORT(rt_hw_nau8822_port);
 #endif /* BOARD_USING_NAU8822 */
 
+#if defined(NU_PKG_USING_ADC_TOUCH)
+#include "adc_touch.h"
+S_CALIBRATION_MATRIX g_sCalMat = { 13321, -53, -1069280, 96, 8461, -1863312, 65536 };
+#endif
+
 #if defined(NU_PKG_USING_TPC_GT911) && defined(BOARD_USING_GT911)
 #include "drv_gpio.h"
 #include "gt911.h"

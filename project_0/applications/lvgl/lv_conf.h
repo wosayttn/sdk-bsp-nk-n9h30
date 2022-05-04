@@ -14,7 +14,7 @@
 #include "rtconfig.h"
 
 #define LV_USE_GPU_N9H30_GE2D           1
-#define LV_USE_ANTI_TEARING             1
+//#define LV_USE_ANTI_TEARING             1
 
 #define LV_COLOR_DEPTH                  BSP_LCD_BPP
 #define LV_HOR_RES_MAX                  BSP_LCD_WIDTH
