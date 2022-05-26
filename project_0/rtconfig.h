@@ -118,6 +118,7 @@
 #define RT_USING_PIN
 #define RT_USING_ADC
 #define RT_USING_PWM
+#define RT_USING_MTD_NAND
 #define RT_USING_RTC
 #define RT_USING_ALARM
 #define RT_USING_SPI
@@ -276,8 +277,10 @@
 /* LVGL: powerful and easy-to-use embedded GUI library */
 
 #define PKG_USING_LVGL
-#define PKG_USING_LVGL_DEMOS
-#define PKG_USING_LVGL_V820
+#define PKG_LVGL_THREAD_PRIO 20
+#define PKG_LVGL_THREAD_STACK_SIZE 4096
+#define PKG_LVGL_DISP_REFR_PERIOD 5
+#define PKG_LVGL_USING_DEMOS
 #define PKG_LVGL_VER_NUM 0x08020
 
 /* u8g2: a monochrome graphic library */
@@ -305,6 +308,8 @@
 
 /* Micrium: Micrium software products porting for RT-Thread */
 
+#define PKG_USING_DFS_YAFFS
+#define PKG_USING_YAFFS_LATEST_VERSION
 #define PKG_USING_RAMDISK
 #define PKG_USING_RAMDISK_LATEST_VERSION
 
@@ -348,6 +353,7 @@
 #define BSP_USING_ETIMER2_CAPTURE
 #define BSP_USING_ETMR3
 #define BSP_USING_ETIMER3_CAPTURE
+#define BSP_USING_FMINAND
 #define BSP_USING_TMR
 #define BSP_USING_TIMER
 #define BSP_USING_TIMER0
