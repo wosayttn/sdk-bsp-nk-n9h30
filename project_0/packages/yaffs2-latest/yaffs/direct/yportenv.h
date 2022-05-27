@@ -18,6 +18,7 @@
 
 #include <rtthread.h>
 #include <rtdevice.h>
+#include "fcntl.h"
 
 #define CONFIG_YAFFS_DIRECT 1
 #define CONFIG_YAFFS_SHORT_NAMES_IN_RAM 1
