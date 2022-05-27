@@ -9,11 +9,10 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-
+#include "yportenv.h"
 #include "yaffsfs.h"
 #include "yaffs_guts.h"
 #include "yaffscfg.h"
-#include "yportenv.h"
 #include "yaffs_trace.h"
 
 #include "string.h"
