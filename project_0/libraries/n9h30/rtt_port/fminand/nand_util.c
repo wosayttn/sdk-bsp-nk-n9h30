@@ -780,8 +780,8 @@ int nand_read_skip_bad(struct mtd_info *mtd, loff_t offset, size_t *length,
             return 0;
 
         *length = 0;
-        rt_kprintf("NAND read from offset %llx failed %d\n",
-                   offset, rval);
+        //rt_kprintf("1_NAND read from offset %08x failed %x\n",
+        //           offset, rval);
         return rval;
     }
 
@@ -806,8 +806,8 @@ int nand_read_skip_bad(struct mtd_info *mtd, loff_t offset, size_t *length,
         rval = nand_read(mtd, offset, &read_length, p_buffer);
         if (rval && rval != -EUCLEAN)
         {
-            rt_kprintf("NAND read from offset %llx failed %d\n",
-                       offset, rval);
+            //rt_kprintf("2_NAND read from offset %08x failed %x\n",
+            //           offset, rval);
             *length -= left_to_read;
             return rval;
         }
