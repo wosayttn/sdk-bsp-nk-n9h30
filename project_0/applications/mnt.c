@@ -10,9 +10,9 @@
 *
 ******************************************************************************/
 
-#include "rtconfig.h"
-
 #include <rtthread.h>
+
+#if defined(RT_USING_DFS)
 
 #define LOG_TAG         "mnt"
 #define DBG_ENABLE
@@ -58,6 +58,14 @@ const struct dfs_mount_tbl mount_table[] =
 #if defined(PKG_USING_RAMDISK)
     { RAMDISK_UDC, "/mnt/ram_usbd", "elm", 0, RT_NULL },
 #endif
+
+#if defined(BOARD_USING_STORAGE_SPIFLASH)
+    { PARTITION_NAME_FILESYSTEM, "/mnt/filesystem", "elm", 0, RT_NULL },
+#endif
+#if defined(PKG_USING_DFS_YAFFS)
+    { "nand1", "/mnt/fminand", "yaffs", 0, RT_NULL },
+#endif
+
     {0},
 };
 #endif
@@ -152,15 +160,57 @@ exit_mkdir_p:
     return ret;
 }
 
+#if defined(PKG_USING_DFS_YAFFS) && defined(RT_USING_DFS_MNTTABLE)
+#include "yaffs_guts.h"
+int yaffs_dev_init(void)
+{
+    int i;
+
+    for (i = 0; i < sizeof(mount_table) / sizeof(struct dfs_mount_tbl); i++)
+    {
+        if (mount_table[i].filesystemtype && !rt_strcmp(mount_table[i].filesystemtype, "yaffs"))
+        {
+            struct rt_mtd_nand_device *psMtdNandDev = RT_MTD_NAND_DEVICE(rt_device_find(mount_table[i].device_name));
+            if (psMtdNandDev)
+            {
+                LOG_I("yaffs start [%s].", mount_table[i].device_name);
+
+                yaffs_start_up(psMtdNandDev, (const char *)mount_table[i].path);
+
+                LOG_I("dfs mount [%s].", mount_table[i].device_name);
+                if (dfs_mount(mount_table[i].device_name,
+                              mount_table[i].path,
+                              mount_table[i].filesystemtype,
+                              mount_table[i].rwflag,
+                              mount_table[i].data) != 0)
+                {
+                    LOG_E("mount fs[%s] on %s failed.", mount_table[i].filesystemtype, mount_table[i].path);
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+INIT_APP_EXPORT(yaffs_dev_init);
+#endif
+
 /* Initialize the filesystem */
 int filesystem_init(void)
 {
     rt_err_t result = RT_EOK;
 
+#if defined(RT_USING_FAL)
+    extern int fal_init_check(void);
+    if (!fal_init_check())
+        fal_init();
+#endif
+
     // ramdisk as root
     if (!rt_device_find(RAMDISK_NAME))
     {
         LOG_E("cannot find %s device", RAMDISK_NAME);
+        result = -RT_ERROR;
         goto exit_filesystem_init;
     }
     else
@@ -179,6 +229,8 @@ int filesystem_init(void)
             mkdir_p("/cache", 0x777);
             mkdir_p("/download", 0x777);
             mkdir_p("/mnt/ram_usbd", 0x777);
+            mkdir_p("/mnt/filesystem", 0x777);
+            mkdir_p("/mnt/fminand", 0x777);
 #if defined(RT_USBH_MSTORAGE) && defined(UDISK_MOUNTPOINT)
             mkdir_p(UDISK_MOUNTPOINT, 0x777);
 #endif
@@ -202,44 +254,20 @@ int filesystem_init(void)
         RT_ASSERT(result == RT_EOK);
     }
 
+#if defined(BOARD_USING_STORAGE_SPIFLASH)
+    {
+        struct rt_device *psNorFlash = fal_blk_device_create(PARTITION_NAME_FILESYSTEM);
+        if (!psNorFlash)
+        {
+            rt_kprintf("Failed to create block device for %s.\n", PARTITION_NAME_FILESYSTEM);
+        }
+    }
+#endif
+
 exit_filesystem_init:
 
     return -result;
 }
 INIT_ENV_EXPORT(filesystem_init);
 #endif
-
-#if defined(BOARD_USING_STORAGE_SPIFLASH)
-int mnt_init_spiflash0(void)
-{
-#if defined(RT_USING_FAL)
-    extern int fal_init_check(void);
-    if (!fal_init_check())
-        fal_init();
 #endif
-    struct rt_device *psNorFlash = fal_blk_device_create(PARTITION_NAME_FILESYSTEM);
-    if (!psNorFlash)
-    {
-        rt_kprintf("Failed to create block device for %s.\n", PARTITION_NAME_FILESYSTEM);
-        goto exit_mnt_init_spiflash0;
-    }
-    else if (mkdir(MOUNT_POINT_SPIFLASH0, 0x777) < 0)
-    {
-        rt_kprintf("Failed to make folder for %s.\n", MOUNT_POINT_SPIFLASH0);
-        goto exit_mnt_init_spiflash0;
-    }
-    else if (dfs_mount(psNorFlash->parent.name, MOUNT_POINT_SPIFLASH0, "elm", 0, 0) != 0)
-    {
-        rt_kprintf("Failed to mount elm on %s.\n", MOUNT_POINT_SPIFLASH0);
-        rt_kprintf("Try to execute 'mkfs -t elm %s' first, then reboot.\n", PARTITION_NAME_FILESYSTEM);
-        goto exit_mnt_init_spiflash0;
-    }
-    rt_kprintf("mount %s with elmfat type: ok\n", PARTITION_NAME_FILESYSTEM);
-
-exit_mnt_init_spiflash0:
-
-    return 0;
-}
-INIT_APP_EXPORT(mnt_init_spiflash0);
-#endif
-

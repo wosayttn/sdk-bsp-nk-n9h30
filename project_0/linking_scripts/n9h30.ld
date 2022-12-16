@@ -9,9 +9,7 @@ MEMORY
 
 SECTIONS
 {
-    . = 0x0;
-
-    . = ALIGN(4);
+    . = ALIGN(4);   
     .text : 
     {
         *(.vectors)
@@ -52,6 +50,11 @@ SECTIONS
         __rt_utest_tc_tab_end = .;
         . = ALIGN(4);
     }
+
+    . = ALIGN(4);
+    __exidx_start = .;
+    .ARM.exidx   : { *(.ARM.exidx* .gnu.linkonce.armexidx.*) }
+    __exidx_end = .;
 
     . = ALIGN(4);
     .rodata : { *(.rodata) *(.rodata.*) *(.gnu.linkonce.r*) *(.eh_frame) }

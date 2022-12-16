@@ -12,16 +12,15 @@
 
 #include <rtconfig.h>
 #include <rtdevice.h>
+#include "board.h"
 
 #if defined(BOARD_USING_STORAGE_SPIFLASH)
-
-#include <drv_qspi.h>
-
 #if defined(RT_USING_SFUD)
     #include "spi_flash.h"
     #include "spi_flash_sfud.h"
 #endif
 
+#include "drv_qspi.h"
 
 #define W25X_REG_READSTATUS    (0x05)
 #define W25X_REG_READSTATUS2   (0x35)
@@ -149,6 +148,33 @@ static int rt_hw_spiflash_init(void)
 }
 INIT_COMPONENT_EXPORT(rt_hw_spiflash_init);
 #endif /* BOARD_USING_STORAGE_SPIFLASH */
+
+#if defined(RT_USING_MTD_NAND) && defined(BSP_USING_FMINAND)
+struct rt_mtd_nand_device mtd_partitions[MTD_FMINAND_PARTITION_NUM] =
+{
+    [0] =
+    {
+        /*nand0: U-boot, env, rtthread*/
+        .block_start = 0,
+        .block_end   = 63,
+        .block_total = 64,
+    },
+    [1] =
+    {
+        /*nand1: for filesystem mounting*/
+        .block_start = 64,
+        .block_end   = 1023,
+        .block_total = 960,
+    },
+    [2] =
+    {
+        /*nand2: Whole blocks size, overlay*/
+        .block_start = 0,
+        .block_end   = 1023,
+        .block_total = 1024,
+    }
+};
+#endif
 
 #if defined(BOARD_USING_NAU8822) && defined(NU_PKG_USING_NAU8822)
 #include <acodec_nau8822.h>
