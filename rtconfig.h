@@ -140,24 +140,6 @@
 
 /* Using USB */
 
-#define RT_USING_USB
-#define RT_USING_USB_HOST
-#define RT_USBH_MSTORAGE
-#define UDISK_MOUNTPOINT "/mnt/udisk"
-#define RT_USING_USB_DEVICE
-#define RT_USBD_THREAD_STACK_SZ 4096
-#define USB_VENDOR_ID 0x0FFE
-#define USB_PRODUCT_ID 0x0001
-#define RT_USB_DEVICE_COMPOSITE
-#define RT_USB_DEVICE_CDC
-#define RT_USB_DEVICE_NONE
-#define RT_USB_DEVICE_MSTORAGE
-#define RT_VCOM_TASK_STK_SIZE 512
-#define RT_CDC_RX_BUFSIZE 128
-#define RT_VCOM_SERNO "32021919830108"
-#define RT_VCOM_SER_LEN 14
-#define RT_VCOM_TX_TIMEOUT 1000
-#define RT_USB_MSTORAGE_DISK_NAME "ramdisk1"
 
 /* C/C++ and POSIX layer */
 
@@ -244,9 +226,6 @@
 #define UTEST_THR_STACK_SIZE 4096
 #define UTEST_THR_PRIORITY 20
 
-/* RT-Thread Utestcases */
-
-
 /* RT-Thread online packages */
 
 /* IoT - internet of things */
@@ -310,6 +289,16 @@
 
 #define PKG_USING_RAMDISK
 #define PKG_USING_RAMDISK_LATEST_VERSION
+#define PKG_USING_CHERRYUSB
+#define PKG_CHERRYUSB_HOST
+#define PKG_CHERRYUSB_HOST_EHCI
+#define PKG_CHERRYUSB_HOST_EHCI_NUVOTON
+#define PKG_CHERRYUSB_HOST_CDC
+#define PKG_CHERRYUSB_HOST_HID
+#define PKG_CHERRYUSB_HOST_MSC
+#define PKG_CHERRYUSB_HOST_RNDIS
+#define PKG_CHERRYUSB_HOST_TEMPLATE
+#define PKG_USING_CHERRYUSB_LATEST_VERSION
 
 /* peripheral libraries and drivers */
 
@@ -428,8 +417,6 @@
 #define BSP_LCD_WIDTH 800
 #define BSP_LCD_HEIGHT 480
 #define BSP_USING_VPOST_OSD
-#define BSP_USING_USBD
-#define BSP_USING_USBH
 
 /* On-board Peripheral Drivers */
 
@@ -439,8 +426,6 @@
 #define BOARD_USING_STORAGE_SDCARD
 #define BOARD_USING_STORAGE_SPIFLASH
 #define BOARD_USING_BUZZER
-#define BOARD_USING_USB0_DEVICE_HOST
-#define BOARD_USING_USB1_HOST
 
 /* Board extended module drivers */
 
@@ -454,7 +439,5 @@
 #define NU_PKG_USING_NAU8822
 #define NU_PKG_USING_ADC_TOUCH
 #define NU_PKG_USING_ADC_TOUCH_HW
-#define UTEST_CMD_PREFIX "bsp.nuvoton.utest."
-#define BOARD_USE_UTEST
 
 #endif
