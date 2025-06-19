@@ -307,13 +307,13 @@ int rt_hw_vpost_init(void)
     if ((psVpostLcmInst->u32DevWidth * psVpostLcmInst->u32DevHeight) > (480 * 272))
     {
         /* LCD clock is selected from UPLL and divide to 20MHz */
-        outpw(REG_CLK_DIVCTL1, (inpw(REG_CLK_DIVCTL1) & ~0xff1f) | 0xE18);
+        //outpw(REG_CLK_DIVCTL1, (inpw(REG_CLK_DIVCTL1) & ~0xff1f) | 0xE18);
 
         /* LCD clock is selected from UPLL and divide to 30MHz */
         //outpw(REG_CLK_DIVCTL1, (inpw(REG_CLK_DIVCTL1) & ~0xff1f) | 0x918);
 
         /* LCD clock is selected from UPLL and divide to 33.3MHz */
-        //outpw(REG_CLK_DIVCTL1, (inpw(REG_CLK_DIVCTL1) & ~0xff1f) | 0x818);
+        outpw(REG_CLK_DIVCTL1, (inpw(REG_CLK_DIVCTL1) & ~0xff1f) | 0x818);
     }
     else
     {
