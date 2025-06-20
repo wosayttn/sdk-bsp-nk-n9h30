@@ -19,7 +19,7 @@
 #include <rtdbg.h>
 
 #ifndef MIN
-#define MIN(a, b)         ((a) < (b) ? (a) : (b))
+    #define MIN(a, b)         ((a) < (b) ? (a) : (b))
 #endif
 
 enum
@@ -78,7 +78,7 @@ static rt_err_t _audio_send_replay_frame(struct rt_audio_device *audio)
 
             remain_bytes = MIN((dst_size - index), (src_size - audio->replay->read_index));
             rt_memcpy(&buf_info->buffer[audio->replay->pos],
-                   &data[audio->replay->read_index], remain_bytes);
+                      &data[audio->replay->read_index], remain_bytes);
 
             index += remain_bytes;
             audio->replay->read_index += remain_bytes;
@@ -260,21 +260,35 @@ static rt_err_t _audio_dev_init(struct rt_device *dev)
             return -RT_ENOMEM;
         rt_memset(record, 0, sizeof(struct rt_audio_record));
 
+        /* Give pipe name for create multiple audio devices. */
+        rt_int32_t name_len = rt_strlen(dev->parent.name) + rt_strlen("rec") + 4;
+        char *pipe_name = rt_malloc(name_len);
+        if (pipe_name == RT_NULL)
+        {
+            rt_free(record);
+            LOG_E("malloc pipe name failed");
+            return -RT_ENOMEM;
+        }
+        rt_snprintf(pipe_name, name_len, "%s_rec", dev->parent.name);
+
         /* init pipe for record*/
         buffer = rt_malloc(RT_AUDIO_RECORD_PIPE_SIZE);
         if (buffer == RT_NULL)
         {
+            rt_free(pipe_name);
             rt_free(record);
             LOG_E("malloc memory for for record pipe failed");
             return -RT_ENOMEM;
         }
-        rt_audio_pipe_init(&record->pipe, "record",
+        rt_audio_pipe_init(&record->pipe, (const char *)pipe_name,
                            (rt_int32_t)(RT_PIPE_FLAG_FORCE_WR | RT_PIPE_FLAG_BLOCK_RD),
                            buffer,
                            RT_AUDIO_RECORD_PIPE_SIZE);
 
         record->activated = RT_FALSE;
         audio->record = record;
+
+        rt_free(pipe_name);
     }
 
     /* initialize hardware configuration */

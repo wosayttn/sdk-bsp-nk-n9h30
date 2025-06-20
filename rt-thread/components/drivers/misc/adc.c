@@ -56,9 +56,9 @@ static rt_err_t _adc_control(rt_device_t dev, int cmd, void *args)
     else if (cmd == RT_ADC_CMD_GET_RESOLUTION && adc->ops->get_resolution && args)
     {
         rt_uint8_t resolution = adc->ops->get_resolution(adc);
-        if(resolution != 0)
+        if (resolution != 0)
         {
-            *((rt_uint8_t*)args) = resolution;
+            *((rt_uint8_t *)args) = resolution;
             LOG_D("resolution: %d bits", resolution);
             result = RT_EOK;
         }
@@ -66,11 +66,15 @@ static rt_err_t _adc_control(rt_device_t dev, int cmd, void *args)
     else if (cmd == RT_ADC_CMD_GET_VREF && adc->ops->get_vref && args)
     {
         rt_int16_t value = adc->ops->get_vref(adc);
-        if(value != 0)
+        if (value != 0)
         {
             *((rt_int16_t *) args) = value;
             result = RT_EOK;
         }
+    }
+    else if (adc->ops->control)
+    {
+        return adc->ops->control(dev, cmd, args);
     }
 
     return result;
@@ -183,7 +187,11 @@ rt_int16_t rt_adc_voltage(rt_adc_device_t dev, rt_uint32_t channel)
     }
 
     /*read the value and convert to voltage*/
-    dev->ops->convert(dev, channel, &value);
+    if (dev->ops->convert(dev, channel, &value) != RT_EOK)
+    {
+        goto _voltage_exit;
+    }
+
     voltage = value * vref / (1 << resolution);
 
 _voltage_exit:
@@ -262,15 +270,28 @@ static int adc(int argc, char **argv)
             }
             else if (!strcmp(argv[1], "voltage"))
             {
-                if(argc == 3)
+                if (argc == 3)
                 {
                     voltage = rt_adc_voltage(adc_device, atoi(argv[2]));
-                    result_str = (result == RT_EOK) ? "success" : "failure";
                     rt_kprintf("%s channel %d voltage is %d.%03dV \n", adc_device->parent.parent.name, (rt_base_t)atoi(argv[2]), voltage / 1000, voltage % 1000);
                 }
                 else
                 {
-                    rt_kprintf("adc convert voltage <channel> \n");
+                    rt_kprintf("adc voltage <channel> \n");
+                }
+            }
+            else if (!strcmp(argv[1], "power"))
+            {
+                if ((argc == 3) && (adc_device->ops->control))
+                {
+                    uint8_t u8Power = atoi(argv[2]);
+                    result = adc_device->ops->control((struct rt_device *)adc_device, NU_ADC_CMD_SET_CONV_POWER, &u8Power);
+                    result_str = (result == RT_EOK) ? "success" : "failure";
+                    rt_kprintf("Set %s power is %d, (%s)\n", adc_device->parent.parent.name, u8Power, result_str);
+                }
+                else
+                {
+                    rt_kprintf("adc power <value> \n");
                 }
             }
             else
@@ -286,6 +307,8 @@ static int adc(int argc, char **argv)
         rt_kprintf("adc read <channel>      - read adc value on the channel\n");
         rt_kprintf("adc disable <channel>   - disable adc channel\n");
         rt_kprintf("adc enable <channel>    - enable adc channel\n");
+        rt_kprintf("adc volate <channel>    - convert voltage on the channel\n");
+        rt_kprintf("adc power <value>       - nuvoton private command value: <0~8>\n");
 
         result = -RT_ERROR;
     }

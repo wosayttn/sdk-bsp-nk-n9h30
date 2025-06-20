@@ -276,7 +276,8 @@ rt_err_t nu_adc_touch_enable(rt_touch_t psRtTouch)
     nu_adc_cb sNuAdcCb;
     ADC_T  *adc = psNuAdc->base;
 
-    adc->CONF = 0x0;
+    /* Enable ADC to high speed mode */
+    adc->CONF = ADC_CONF_SPEED_Msk | ADC_CONF_REFSEL_Msk;
 
     rt_adc_enable((rt_adc_device_t)psNuAdc, 4);  //Channel number 4
     rt_adc_enable((rt_adc_device_t)psNuAdc, 5);  //Channel number 5
@@ -488,6 +489,10 @@ static rt_err_t _nu_adc_open(rt_device_t dev, rt_uint16_t oflag)
 
     /* Enable ADC to high speed mode */
     adc->CONF |= ADC_CONF_SPEED_Msk;
+    /* Use Internal VREF */
+    /* Note that the external VREF for the ADC is assigned to channel 0.
+       If the external VREF is to be used, channel 0 cannot be used as a normal input channel. */
+    adc->CONF |= ADC_CONF_REFSEL_Msk;
 
     /* Enable interrupt */
     rt_hw_interrupt_umask(psNuAdc->irqn);

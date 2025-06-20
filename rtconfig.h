@@ -51,6 +51,7 @@
 #define RT_CONSOLEBUF_SIZE 256
 #define RT_CONSOLE_DEVICE_NAME "uart0"
 #define RT_VER_NUM 0x50000
+#define RT_USING_CACHE
 #define ARCH_ARM
 #define ARCH_ARM_ARM9
 
@@ -244,9 +245,6 @@
 #define UTEST_THR_STACK_SIZE 4096
 #define UTEST_THR_PRIORITY 20
 
-/* RT-Thread Utestcases */
-
-
 /* RT-Thread online packages */
 
 /* IoT - internet of things */
@@ -261,6 +259,12 @@
 
 
 /* CYW43012 WiFi */
+
+
+/* BL808 WiFi */
+
+
+/* CYW43439 WiFi */
 
 
 /* IoT Cloud */
@@ -291,6 +295,12 @@
 
 /* u8g2: a monochrome graphic library */
 
+#define PKG_USING_WAVPLAYER
+#define PKG_WP_USING_PLAY
+#define PKG_WP_PLAY_DEVICE "sound0"
+#define PKG_WP_USING_RECORD
+#define PKG_WP_RECORD_DEVICE "sound0"
+#define PKG_USING_WAVPLAYER_LATEST_VERSION
 
 /* tools packages */
 
@@ -313,13 +323,27 @@
 
 /* peripheral libraries and drivers */
 
+/* HAL & SDK Drivers */
+
+/* STM32 HAL & SDK Drivers */
+
+
+/* Infineon HAL Packages */
+
+
+/* Kendryte SDK */
+
+
+/* WCH HAL & SDK Drivers */
+
+
+/* AT32 HAL & SDK Drivers */
+
+
 /* sensors drivers */
 
 
 /* touch drivers */
-
-
-/* Kendryte SDK */
 
 
 /* AI packages */
@@ -337,6 +361,8 @@
 
 /* entertainment: terminal games and other interesting software packages */
 
+#define PKG_USING_OPTPARSE
+#define PKG_USING_OPTPARSE_LATEST_VERSION
 
 /* Arduino libraries */
 
@@ -376,7 +402,9 @@
 
 /* On-chip Peripheral Drivers */
 
+#define SOC_FAMILY_NUMICRO
 #define SOC_SERIES_N9H30
+#define BSP_USING_GDMA
 #define BSP_USING_MMU
 #define BSP_USING_GPIO
 #define BSP_USING_EMAC
@@ -427,7 +455,6 @@
 #define BSP_LCD_BPP 16
 #define BSP_LCD_WIDTH 800
 #define BSP_LCD_HEIGHT 480
-#define BSP_USING_VPOST_OSD
 #define BSP_USING_USBD
 #define BSP_USING_USBH
 
@@ -454,7 +481,5 @@
 #define NU_PKG_USING_NAU8822
 #define NU_PKG_USING_ADC_TOUCH
 #define NU_PKG_USING_ADC_TOUCH_HW
-#define UTEST_CMD_PREFIX "bsp.nuvoton.utest."
-#define BOARD_USE_UTEST
 
 #endif

@@ -168,6 +168,10 @@ static rt_err_t nu_i2s_dai_setup(nu_i2s_t psNuI2s, struct rt_audio_configure *pc
     /* Open I2S */
     if (nu_i2s_capacity_check(pconfig) == RT_TRUE)
     {
+        /* Set mute */
+        if (pNuACodecOps->nu_acodec_mixer_control)
+            pNuACodecOps->nu_acodec_mixer_control(AUDIO_MIXER_MUTE, RT_TRUE);
+
         /* Reset audio codec */
         if (pNuACodecOps->nu_acodec_reset)
             result = pNuACodecOps->nu_acodec_reset();
@@ -529,10 +533,15 @@ static rt_err_t nu_i2s_stop(struct rt_audio_device *audio, int stream)
 {
     nu_i2s_t psNuI2s;
     nu_i2s_dai_t psNuI2sDai = RT_NULL;
+    nu_acodec_ops_t pNuACodecOps = RT_NULL;
 
     RT_ASSERT(audio != RT_NULL);
 
     psNuI2s = (nu_i2s_t)audio;
+
+    RT_ASSERT(psNuI2s->AcodecOps != RT_NULL);
+
+    pNuACodecOps = psNuI2s->AcodecOps;
 
     switch (stream)
     {
@@ -560,6 +569,15 @@ static rt_err_t nu_i2s_stop(struct rt_audio_device *audio, int stream)
     if (!((inpw(REG_ACTL_RESET)&I2S_RESET_PLAY_Msk) || (inpw(REG_ACTL_RESET)&I2S_RESET_RECORD_Msk)))
     {
         i2sClose();
+
+        /* Reset audio codec */
+        if (pNuACodecOps->nu_acodec_reset)
+            pNuACodecOps->nu_acodec_reset();
+
+        /* Set mute */
+        if (pNuACodecOps->nu_acodec_mixer_control)
+            pNuACodecOps->nu_acodec_mixer_control(AUDIO_MIXER_MUTE, RT_TRUE);
+
         LOG_I("Close I2S.");
     }
 

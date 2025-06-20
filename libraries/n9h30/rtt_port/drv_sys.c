@@ -367,10 +367,18 @@ int list_interrupt(int argc, char **argv)
 MSH_CMD_EXPORT(list_interrupt, list registered interrupts);
 #endif
 
-
-
 void devmem(int argc, char *argv[])
 {
+    /**
+     * @brief  This function may interact with critical system registers. Use with caution.
+     *
+     * @details
+     * This function has the potential to access and modify important system registers
+     * as part of its operation. Ensure proper validation and system state checks
+     * before calling this function. Improper or careless usage may lead to system
+     * instability or unintended behavior.
+    */
+
     volatile unsigned int u32Addr;
     unsigned int value = 0, mode = 0;
 
@@ -407,6 +415,16 @@ MSH_CMD_EXPORT(devmem, dump device registers);
 
 void devmem2(int argc, char *argv[])
 {
+    /**
+     * @brief  This function may interact with critical system registers. Use with caution.
+     *
+     * @details
+     * This function has the potential to access and modify important system registers
+     * as part of its operation. Ensure proper validation and system state checks
+     * before calling this function. Improper or careless usage may lead to system
+     * instability or unintended behavior.
+    */
+
     volatile unsigned int u32Addr;
     unsigned int value = 0, word_count = 1;
 

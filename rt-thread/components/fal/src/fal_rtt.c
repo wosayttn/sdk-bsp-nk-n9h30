@@ -15,6 +15,7 @@
 #include <rtthread.h>
 #include <rtdevice.h>
 #include <string.h>
+#include <stdlib.h>
 
 /* ========================== block device ======================== */
 struct fal_blk_device
@@ -588,7 +589,7 @@ static void fal(uint8_t argc, char **argv) {
     else
     {
         const char *operator = argv[1];
-        uint32_t addr, size;
+        uint32_t addr, size = 0;
 
         if (!strcmp(operator, "probe"))
         {

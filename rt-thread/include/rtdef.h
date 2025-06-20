@@ -1165,6 +1165,7 @@ struct rt_device_blk_sectors
 #define RTGRAPHIC_CTRL_GET_STATUS       (RT_DEVICE_CTRL_BASE(Graphic) + 9)
 #define RTGRAPHIC_CTRL_PAN_DISPLAY      (RT_DEVICE_CTRL_BASE(Graphic) + 10)
 #define RTGRAPHIC_CTRL_WAIT_VSYNC       (RT_DEVICE_CTRL_BASE(Graphic) + 11)
+#define RTGRAPHIC_CTRL_RECT_UPDATE2     (RT_DEVICE_CTRL_BASE(Graphic) + 20)
 
 /* graphic device */
 enum
@@ -1215,6 +1216,7 @@ struct rt_device_rect_info
     rt_uint16_t y;                                      /**< y coordinate */
     rt_uint16_t width;                                  /**< width */
     rt_uint16_t height;                                 /**< height */
+    rt_uint8_t *framebuffer;                            /**< specify source buffer address */
 };
 
 /**

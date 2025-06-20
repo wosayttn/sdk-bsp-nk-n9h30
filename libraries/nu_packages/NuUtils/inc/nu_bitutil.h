@@ -21,9 +21,9 @@
         #endif
     #endif
 
-    #if !defined(__CLZ)
-        #define __CLZ     __clz
-    #endif
+    //#if !defined(__CLZ)
+        //#define __CLZ     __clz
+    //#endif
 #elif defined (__GNUC__)
     #define __CLZ     __builtin_clz
 #endif

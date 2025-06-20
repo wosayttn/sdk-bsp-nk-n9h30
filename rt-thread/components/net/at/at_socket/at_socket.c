@@ -1575,7 +1575,6 @@ int at_getaddrinfo(const char *nodename, const char *servname,
     /* set up sockaddr */
 #if NETDEV_IPV4 && NETDEV_IPV6
     sa4->sin_addr.s_addr = addr.u_addr.ip4.addr;
-    sa4->type = IPADDR_TYPE_V4;
 #elif NETDEV_IPV4
     sa4->sin_addr.s_addr = addr.addr;
 #elif NETDEV_IPV6

@@ -359,7 +359,7 @@ RT_WEAK rt_uint8_t pm_get_sleep_threshold_mode(rt_uint8_t cur_mode, rt_tick_t ti
  */
 static void _pm_change_sleep_mode(struct rt_pm *pm)
 {
-    rt_tick_t timeout_tick, delta_tick;
+    rt_tick_t timeout_tick, delta_tick = 0;
     rt_base_t level;
     uint8_t sleep_mode = PM_SLEEP_MODE_DEEP;
 

@@ -1,4 +1,7 @@
-config SOC_SERIES_N9H30
+config SOC_FAMILY_NUMICRO
+    bool
+
+    config SOC_SERIES_N9H30
     bool
     select ARCH_ARM_ARM9
     select SOC_FAMILY_NUMICRO
@@ -10,8 +13,13 @@ config SOC_SERIES_N9H30
         bool "Build StdDriver source"
         default n
 
+    config BSP_USING_GDMA
+        bool
+        default y
+
     config BSP_USING_MMU
         bool "Enable MMU"
+        select RT_USING_CACHE
         default y
 
     config BSP_USING_GPIO

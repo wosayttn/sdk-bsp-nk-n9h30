@@ -45,22 +45,40 @@ extern "C" {
 
 enum RT_HW_CACHE_OPS
 {
-    RT_HW_CACHE_FLUSH      = 0x01,
-    RT_HW_CACHE_INVALIDATE = 0x02,
+    RT_HW_CACHE_FLUSH            = 0x01,
+    RT_HW_CACHE_INVALIDATE       = 0x02,
+    RT_HW_CACHE_FLUSH_INVALIDATE = (RT_HW_CACHE_FLUSH | RT_HW_CACHE_INVALIDATE),
 };
 
 /*
  * CPU interfaces
  */
+#if defined(RT_USING_CACHE)
+
 void rt_hw_cpu_icache_enable(void);
 void rt_hw_cpu_icache_disable(void);
 rt_base_t rt_hw_cpu_icache_status(void);
-void rt_hw_cpu_icache_ops(int ops, void* addr, int size);
+void rt_hw_cpu_icache_ops(int ops, void *addr, int size);
 
 void rt_hw_cpu_dcache_enable(void);
 void rt_hw_cpu_dcache_disable(void);
 rt_base_t rt_hw_cpu_dcache_status(void);
-void rt_hw_cpu_dcache_ops(int ops, void* addr, int size);
+void rt_hw_cpu_dcache_ops(int ops, void *addr, int size);
+
+#else
+
+#define rt_hw_cpu_icache_enable()
+#define rt_hw_cpu_icache_disable()
+#define rt_hw_cpu_icache_status()
+#define rt_hw_cpu_icache_ops(ops, addr, size)
+
+#define rt_hw_cpu_dcache_enable()
+#define rt_hw_cpu_dcache_disable()
+#define rt_hw_cpu_dcache_status()
+#define rt_hw_cpu_dcache_ops(ops, addr, size)
+
+#endif
+
 
 void rt_hw_cpu_reset(void);
 void rt_hw_cpu_shutdown(void);
@@ -93,9 +111,9 @@ void rt_hw_interrupt_init(void);
 void rt_hw_interrupt_mask(int vector);
 void rt_hw_interrupt_umask(int vector);
 rt_isr_handler_t rt_hw_interrupt_install(int              vector,
-                                         rt_isr_handler_t handler,
-                                         void            *param,
-                                         const char      *name);
+        rt_isr_handler_t handler,
+        void            *param,
+        const char      *name);
 
 #ifdef RT_USING_SMP
 rt_base_t rt_hw_local_irq_disable();
@@ -138,9 +156,11 @@ void rt_hw_exception_install(rt_err_t (*exception_handle)(void *context));
 void rt_hw_us_delay(rt_uint32_t us);
 
 #ifdef RT_USING_SMP
-typedef union {
+typedef union
+{
     unsigned long slock;
-    struct __arch_tickets {
+    struct __arch_tickets
+    {
         unsigned short owner;
         unsigned short next;
     } tickets;

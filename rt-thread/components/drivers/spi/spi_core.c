@@ -72,7 +72,7 @@ rt_err_t rt_spi_bus_attach_device(struct rt_spi_device *device,
 rt_err_t rt_spi_configure(struct rt_spi_device        *device,
                           struct rt_spi_configuration *cfg)
 {
-    rt_err_t result;
+    rt_err_t result = -RT_ERROR;
 
     RT_ASSERT(device != RT_NULL);
 
@@ -86,17 +86,24 @@ rt_err_t rt_spi_configure(struct rt_spi_device        *device,
         result = rt_mutex_take(&(device->bus->lock), RT_WAITING_FOREVER);
         if (result == RT_EOK)
         {
-            if (device->bus->owner == device)
+            /* Re-configure SPI bus */
+            result = device->bus->ops->configure(device, &device->config);
+            if (result == RT_EOK)
             {
-                device->bus->ops->configure(device, &device->config);
+                /* set bus owner */
+                device->bus->owner = device;
             }
-
+            else
+            {
+                /* configure SPI bus failed */
+                result = -RT_EIO;
+            }
             /* release lock */
             rt_mutex_release(&(device->bus->lock));
         }
     }
 
-    return RT_EOK;
+    return result;
 }
 
 rt_err_t rt_spi_send_then_send(struct rt_spi_device *device,

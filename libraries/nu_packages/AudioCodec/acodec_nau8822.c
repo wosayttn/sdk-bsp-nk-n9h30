@@ -153,7 +153,7 @@ static rt_err_t nau8822_dsp_config(rt_uint32_t ui32SamplRate, rt_uint8_t u8ChNum
     uint8_t   bClkDiv;
     uint8_t   mClkDiv;
     uint16_t  u16AudIf = 0x010; /* I2S, 16-bit */
-    uint16_t  u16ClkCtrl;
+    uint16_t  u16ClkCtrl = 0;
     uint8_t   u8WLEN;
 
     if (ui32SamplRate > 48000)
@@ -248,7 +248,7 @@ static rt_err_t nau8822_dsp_config(rt_uint32_t ui32SamplRate, rt_uint8_t u8ChNum
         mClkDiv = 7;
         break;
     default:
-        LOG_E("mclk divider not match!\n");
+        LOG_E("mclk divider(%d) not match!\n", mClkDiv);
         mClkDiv = 0;
         return -RT_ERROR;
     }
@@ -262,6 +262,9 @@ static rt_err_t nau8822_dsp_config(rt_uint32_t ui32SamplRate, rt_uint8_t u8ChNum
         bClkDiv = 1;
         break;
     case 4:
+    case 5:
+    case 6:
+    case 7:
         bClkDiv = 2;
         break;
     case 8:
@@ -274,7 +277,7 @@ static rt_err_t nau8822_dsp_config(rt_uint32_t ui32SamplRate, rt_uint8_t u8ChNum
         bClkDiv = 5;
         break;
     default:
-        LOG_E("bclk divider not match!\n");
+        LOG_E("bclk(%d) divider not match!\n", bClkDiv);
         bClkDiv = 0;
         return -RT_ERROR;
     }
@@ -296,30 +299,26 @@ static rt_err_t nau8822_dsp_config(rt_uint32_t ui32SamplRate, rt_uint8_t u8ChNum
 
 static rt_err_t nau8822_init(void)
 {
-    //input source is MIC
-    if (nu_acodec_ops_nau8822.role == NU_ACODEC_ROLE_MASTER)
-    {
-        I2C_WriteNAU8822(1,  0x03F);   /* PLLEN, MICBIASEN, ABIASEN, IOBUFEN, REFIMP(3kohm)  */
-    }
-    else
-    {
-        I2C_WriteNAU8822(1,  0x01F);   /* MICBIASEN, ABIASEN, IOBUFEN, REFIMP(3kohm)  */
-    }
-
+    I2C_WriteNAU8822(1,  0x03F);   /* PLLEN, MICBIASEN, ABIASEN, IOBUFEN, REFIMP(3kohm)  */
     I2C_WriteNAU8822(2,  0x1BF);   /* Enable L/R Headphone, ADC Mix/Boost, ADC */
     I2C_WriteNAU8822(3,  0x07F);   /* Enable L/R main mixer, DAC */
     I2C_WriteNAU8822(4,  0x010);   /* 16-bit word length, I2S format, Stereo */
     I2C_WriteNAU8822(5,  0x000);   /* Companding control and loop back mode (all disable) */
     nau8822_delay_ms(30);
 
-    I2C_WriteNAU8822(6,  0x1AD);   /* Divide by 6, 16K */
-    I2C_WriteNAU8822(7,  0x006);   /* 16K for internal filter coefficients */
+    if (nu_acodec_ops_nau8822.role == NU_ACODEC_ROLE_MASTER)
+    {
+        I2C_WriteNAU8822(6,  0x1AD);   /* Divide by 6, 16K */
+        I2C_WriteNAU8822(7,  0x006);   /* 16K for internal filter coefficients */
+    }
 
+#if !defined(SOC_SERIES_N9H30)
 //R9 GPIO pin selection for jack detect function, jack detection enable, VREF jack enable
 //R13 bit mapped selection of which outputs are to be enabled when jack detect is in a logic 1 state
 //R13 bit mapped selection of which outputs are to be enabled when jack detect is in a logic 0 state
-    I2C_WriteNAU8822(9,  0x1D0);   /* jack detect 1 */
+    //I2C_WriteNAU8822(9,  0x1D0);   /* jack detect 1 */
     I2C_WriteNAU8822(13,  0x121);   /* jack detect 2 */
+#endif
 
     I2C_WriteNAU8822(10, 0x008);   /* DAC soft mute is disabled, DAC oversampling rate is 128x */
     I2C_WriteNAU8822(14, 0x108);   /* ADC HP filter is disabled, ADC oversampling rate is 128x */
@@ -337,11 +336,17 @@ static rt_err_t nau8822_init(void)
     I2C_WriteNAU8822(0x34, 0x13F);
     I2C_WriteNAU8822(0x35, 0x13F);
 
-    I2C_WriteNAU8822(11,  0x100 | 204); // volume 80%
-    I2C_WriteNAU8822(12,  0x100 | 204); // volume 80%
-
-    I2C_WriteNAU8822(54,  0x100 | 50);  // volume 80%
-    I2C_WriteNAU8822(55,  0x100 | 50);  // volume 80%
+#if 1
+    I2C_WriteNAU8822(11,  0x100 | 240);
+    I2C_WriteNAU8822(12,  0x100 | 240);
+    I2C_WriteNAU8822(54,  0x100 | 0x3B);
+    I2C_WriteNAU8822(55,  0x100 | 0x3B);
+#else
+    I2C_WriteNAU8822(11,  0x100 | 255); // volume 95%
+    I2C_WriteNAU8822(12,  0x100 | 255); // volume 95%
+    I2C_WriteNAU8822(54,  0x100 | 0x3F);  // volume 95%
+    I2C_WriteNAU8822(55,  0x100 | 0x3F);  // volume 95%
+#endif
 
     nu_acodec_ops_nau8822.config.samplerate = 16000;
     nu_acodec_ops_nau8822.config.channels = 2;

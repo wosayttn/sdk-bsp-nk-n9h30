@@ -1486,6 +1486,13 @@ netif_ip6_addr_set_state(struct netif *netif, s8_t addr_idx, u8_t state)
     }
 #endif
   }
+
+#ifdef RT_USING_NETDEV
+  /* rt-thread network interface device set ipv6 address */
+  if ((addr_idx>0) && (addr_idx<LWIP_IPV6_NUM_ADDRESSES))
+    ip_addr_copy(netdev_get_by_name(netif->name)->ip6_addr[addr_idx], netif->ip6_addr[addr_idx]);
+#endif /* RT_USING_NETDEV */
+
   LWIP_DEBUGF(NETIF_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("netif: IPv6 address %d of interface %c%c set to %s/0x%"X8_F"\n",
               addr_idx, netif->name[0], netif->name[1], ip6addr_ntoa(netif_ip6_addr(netif, addr_idx)),
               netif_ip6_addr_state(netif, addr_idx)));
@@ -1763,7 +1770,8 @@ netif_find(const char *name)
     return NULL;
   }
 
-  num = (u8_t)atoi(&name[2]);
+  /* Out netif's name is e0, e1... */
+  num = (u8_t)atoi(&name[1]);
 
   NETIF_FOREACH(netif) {
     if (num == netif->num &&

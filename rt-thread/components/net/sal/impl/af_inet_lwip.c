@@ -83,6 +83,12 @@ extern struct lwip_sock *lwip_tryget_socket(int s);
 
 static void event_callback(struct netconn *conn, enum netconn_evt evt, u16_t len)
 {
+    #if (LWIP_VERSION >= 0x20200ff)
+        #define CONN_SOCKET       conn->callback_arg.socket
+    #else
+        #define CONN_SOCKET       conn->socket
+    #endif
+
     int s;
     struct lwip_sock *sock;
     uint32_t event = 0;
@@ -93,7 +99,7 @@ static void event_callback(struct netconn *conn, enum netconn_evt evt, u16_t len
     /* Get socket */
     if (conn)
     {
-        s = conn->socket;
+        s = CONN_SOCKET;
         if (s < 0)
         {
             /* Data comes in right away after an accept, even though
@@ -102,16 +108,16 @@ static void event_callback(struct netconn *conn, enum netconn_evt evt, u16_t len
              * will use the data later. Note that only receive events
              * can happen before the new socket is set up. */
             SYS_ARCH_PROTECT(lev);
-            if (conn->socket < 0)
+            if (CONN_SOCKET < 0)
             {
                 if (evt == NETCONN_EVT_RCVPLUS)
                 {
-                    conn->socket--;
+                    CONN_SOCKET--;
                 }
                 SYS_ARCH_UNPROTECT(lev);
                 return;
             }
-            s = conn->socket;
+            s = CONN_SOCKET;
             SYS_ARCH_UNPROTECT(lev);
         }
 

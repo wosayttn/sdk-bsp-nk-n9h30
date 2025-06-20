@@ -38,18 +38,7 @@
     #define NU_EMAC_TRACE(...)
 #endif
 
-#define NU_EMAC_TID_STACK_SIZE  1024
-
-/* Private typedef --------------------------------------------------------------*/
-struct nu_emac_lwip_pbuf
-{
-    struct pbuf_custom p;  // lwip pbuf
-    EMAC_FRAME_T *psPktFrameDataBuf; // gmac descriptor
-    EMAC_MEMMGR_T *psMemMgr;
-    EMAC_DESCRIPTOR_T *rx_desc;
-    const struct memp_desc *memp_rx_pool;
-};
-typedef struct nu_emac_lwip_pbuf *nu_emac_lwip_pbuf_t;
+#define NU_EMAC_TID_STACK_SIZE  2048
 
 struct nu_emac
 {
@@ -61,9 +50,7 @@ struct nu_emac
     E_SYS_IPRST         rstidx;
     E_SYS_IPCLK         clkidx;
     rt_thread_t         link_monitor;
-    rt_uint8_t          mac_addr[NETIF_MAX_HWADDR_LEN];
-    struct rt_semaphore eth_sem;
-    const struct memp_desc *memp_rx_pool;
+    rt_uint8_t          mac_addr[8];
 };
 typedef struct nu_emac *nu_emac_t;
 
@@ -91,17 +78,7 @@ static void *nu_emac_memcpy(void *dest, void *src, unsigned int count);
 static void nu_emac_tx_isr(int vector, void *param);
 static void nu_emac_rx_isr(int vector, void *param);
 
-/* Public functions -------------------------------------------------------------*/
-
 /* Private variables ------------------------------------------------------------*/
-#if defined(BSP_USING_EMAC0)
-    LWIP_MEMPOOL_DECLARE(emac0_rx, EMAC_RX_DESC_SIZE, sizeof(struct nu_emac_lwip_pbuf), "EMAC0 RX PBUF pool");
-#endif
-
-#if defined(BSP_USING_EMAC1)
-    LWIP_MEMPOOL_DECLARE(emac1_rx, EMAC_RX_DESC_SIZE, sizeof(struct nu_emac_lwip_pbuf), "EMAC1 RX PBUF pool");
-#endif
-
 static struct nu_emac nu_emac_arr[] =
 {
 #if defined(BSP_USING_EMAC0)
@@ -113,7 +90,6 @@ static struct nu_emac nu_emac_arr[] =
         .rstidx          =  EMAC0RST,
         .clkidx          =  EMAC0CKEN,
         .mac_addr        = {0x82, 0x06, 0x21, 0x94, 0x53, 0x01},
-        .memp_rx_pool    =  &memp_emac0_rx
     },
 #endif
 #if defined(BSP_USING_EMAC1)
@@ -125,7 +101,6 @@ static struct nu_emac nu_emac_arr[] =
         .rstidx         =  EMAC1RST,
         .clkidx         =  EMAC1CKEN,
         .mac_addr        = {0x82, 0x06, 0x21, 0x94, 0x53, 0x02},
-        .memp_rx_pool   =  &memp_emac1_rx
     },
 #endif
 };
@@ -317,9 +292,6 @@ static rt_err_t nu_emac_init(rt_device_t dev)
 
     snprintf(szTmp, sizeof(szTmp), "%sphy", psNuEmac->name);
 
-    ret = rt_sem_init(&psNuEmac->eth_sem, "eth_sem", 0, RT_IPC_FLAG_FIFO);
-    RT_ASSERT(ret == RT_EOK);
-
     EMAC_Reset(EMAC);
 
     EMAC_Close(EMAC);
@@ -433,22 +405,7 @@ static rt_err_t nu_emac_tx(rt_device_t dev, struct pbuf *p)
     buf = (rt_uint8_t *)EMAC_ClaimFreeTXBuf(&psNuEmac->memmgr);
     /* Get free TX buffer */
     if (buf == RT_NULL)
-    {
-        rt_err_t result;
-
-        result = rt_sem_control(&psNuEmac->eth_sem, RT_IPC_CMD_RESET, 0);
-        RT_ASSERT(result != RT_EOK);
-
-        EMAC_CLEAR_INT_FLAG(EMAC, EMAC_INTSTS_TXCPIF_Msk);
-        EMAC_ENABLE_INT(EMAC, EMAC_INTEN_TXCPIEN_Msk);
-
-        do
-        {
-            result = rt_sem_take(&psNuEmac->eth_sem, 10);
-            buf = (rt_uint8_t *)EMAC_ClaimFreeTXBuf(&psNuEmac->memmgr);
-        }
-        while (buf == RT_NULL);
-    }
+        return -RT_ERROR;
 
     for (q = p; q != NULL; q = q->next)
     {
@@ -467,87 +424,61 @@ static rt_err_t nu_emac_tx(rt_device_t dev, struct pbuf *p)
     nu_emac_pkt_dump("TX dump", p);
 #endif
 
+    if (!EMAC_SendPktWoCopy(&psNuEmac->memmgr, offset))
+        return -RT_ERROR;
+
+    EMAC_SendPktDone(&psNuEmac->memmgr);
+
     /* Return SUCCESS? */
-    return (EMAC_SendPktWoCopy(&psNuEmac->memmgr, offset) == 1) ? RT_EOK : RT_ERROR;
+    return  RT_EOK;
 }
 
-void nu_emac_pbuf_free(struct pbuf *p)
+static void eth_rx_push(nu_emac_t psNuEmac)
 {
-    nu_emac_lwip_pbuf_t my_buf = (nu_emac_lwip_pbuf_t)p;
-
-    // NU_EMAC_TRACE("%08x %08x\n", my_buf, my_buf->rx_desc);
-
-    SYS_ARCH_DECL_PROTECT(old_level);
-    SYS_ARCH_PROTECT(old_level);
-
-    /* Update RX descriptor & trigger */
-    EMAC_RxTrigger(my_buf->psMemMgr, my_buf->rx_desc);
-
-    memp_free_pool(my_buf->memp_rx_pool, my_buf);
-    SYS_ARCH_UNPROTECT(old_level);
-}
-
-static struct pbuf *nu_emac_rx(rt_device_t dev)
-{
-    nu_emac_t psNuEmac = (nu_emac_t)dev;
-    struct pbuf *p = RT_NULL;
-    uint8_t *pu8DataBuf = NULL;
-    unsigned int avaialbe_size;
+    struct netif *netif = psNuEmac->eth.netif;
     EMAC_T *EMAC = psNuEmac->memmgr.psEmac;
 
-    /* Check available data. */
-    if ((avaialbe_size = EMAC_GetAvailRXBufSize(&psNuEmac->memmgr, &pu8DataBuf)) > 0)
+    while (1)
     {
+        err_t ret;
+        struct pbuf *pbuf = RT_NULL;
+        uint8_t *pu8DataBuf = NULL;
+        int s32PktLen;
+
+        if ((s32PktLen = EMAC_GetAvailRXBufSize(&psNuEmac->memmgr, &pu8DataBuf)) <= 0)
+        {
+            break;
+        }
+        /* Get current RX descriptor. */
         EMAC_DESCRIPTOR_T *cur_rx = EMAC_RecvPktDoneWoRxTrigger(&psNuEmac->memmgr);
-        nu_emac_lwip_pbuf_t my_pbuf  = (nu_emac_lwip_pbuf_t)memp_malloc_pool(psNuEmac->memp_rx_pool);
-        if (my_pbuf != RT_NULL)
+
+        /* Allocate a pbuf chain of pbufs from the pool. */
+        if ((pbuf = pbuf_alloc(PBUF_RAW, s32PktLen, PBUF_POOL)) != NULL)
         {
-
-            my_pbuf->p.custom_free_function = nu_emac_pbuf_free;
-            my_pbuf->psPktFrameDataBuf      = (EMAC_FRAME_T *)pu8DataBuf;
-            my_pbuf->rx_desc                = cur_rx;
-            my_pbuf->psMemMgr               = &psNuEmac->memmgr;
-            my_pbuf->memp_rx_pool           = psNuEmac->memp_rx_pool;
-
 #if defined(BSP_USING_MMU)
-            mmu_invalidate_dcache((rt_uint32_t)pu8DataBuf, (rt_uint32_t)avaialbe_size);
+            mmu_invalidate_dcache((rt_uint32_t)pu8DataBuf, (rt_uint32_t)s32PktLen);
 #endif
-            // NU_EMAC_TRACE("%08x, %08x, %d\n", my_pbuf, cur_rx, avaialbe_size);
-            p = pbuf_alloced_custom(PBUF_RAW,
-                                    avaialbe_size,
-                                    PBUF_REF,
-                                    &my_pbuf->p,
-                                    pu8DataBuf,
-                                    EMAC_MAX_PKT_SIZE);
-            if (p == RT_NULL)
-            {
-                NU_EMAC_TRACE("%s : failed to alloted %08x\n", __func__, p);
-                EMAC_RxTrigger(&psNuEmac->memmgr, cur_rx);
-            }
+            pbuf_take(pbuf, pu8DataBuf, s32PktLen);
         }
         else
         {
-            NU_EMAC_TRACE("LWIP_MEMPOOL_ALLOC < 0!!\n");
-            EMAC_RxTrigger(&psNuEmac->memmgr, cur_rx);
-        }
-    }
-    else    /* If it hasn't RX packet, it will enable interrupt. */
-    {
-        /* No available RX packet, we enable RXGD/RDUIEN interrupts. */
-        if (!(EMAC->INTEN & EMAC_INTEN_RDUIEN_Msk))
-        {
-            EMAC_ENABLE_INT(EMAC, (EMAC_INTEN_RDUIEN_Msk | EMAC_INTEN_RXGDIEN_Msk));
-        }
-        else
-        {
-            EMAC_ENABLE_INT(EMAC, EMAC_INTEN_RXGDIEN_Msk);
+            rt_kprintf("[%s] drop the packet %08x\n", psNuEmac->name, pu8DataBuf);
         }
 
-        /* Trigger EMAC to send the packet */
-        EMAC_TRIGGER_RX(EMAC);
-    }
+        /* Free or drop descriptor. */
+        EMAC_RxTrigger(&psNuEmac->memmgr, cur_rx);
 
-    return p;
+        if ((ret = netif->input(pbuf, netif)) != ERR_OK)
+        {
+            rt_kprintf("[%s] input error %08x err_t:%08x\n", psNuEmac->name, pbuf, ret);
+            pbuf_free(pbuf);
+            break;
+        }
+
+    } //while(1)
+
+    /* Trigger EMAC for receiving. */
+    EMAC_TRIGGER_RX(EMAC);
 }
 
 static void nu_emac_rx_isr(int vector, void *param)
@@ -555,33 +486,37 @@ static void nu_emac_rx_isr(int vector, void *param)
     nu_emac_t psNuEmac = (nu_emac_t)param;
     EMAC_T *EMAC = psNuEmac->memmgr.psEmac;
 
-    unsigned int status = EMAC->INTSTS & 0xFFFF;
+    uint32_t u32INTSTS = EMAC->INTSTS & 0xFFFF;
 
-    /* No RX descriptor available, we need to get data from RX pool */
-    if (EMAC_GET_INT_FLAG(EMAC, EMAC_INTSTS_RDUIF_Msk))
+    if (u32INTSTS & EMAC_INTSTS_RDUIF_Msk)
     {
-        EMAC_DISABLE_INT(EMAC, (EMAC_INTEN_RDUIEN_Msk | EMAC_INTEN_RXGDIEN_Msk));
+        /* No RX descriptor available, we need to get data from RX pool */
+        NU_EMAC_TRACE("No RX descriptor available, INTEN=%08x, INTSTS=%08x\n", EMAC->INTEN, EMAC->INTSTS);
         EMAC_CLEAR_INT_FLAG(EMAC, (EMAC_INTSTS_RDUIF_Msk | EMAC_INTSTS_RXGDIF_Msk));
-        eth_device_ready(&psNuEmac->eth);
-        NU_EMAC_TRACE("No RX descriptor available\n");
+        u32INTSTS &= ~(EMAC_INTSTS_RDUIF_Msk | EMAC_INTSTS_RXGDIF_Msk);
+
+        eth_rx_push(psNuEmac);
     }
-    /* A good packet ready. */
-    else if (EMAC_GET_INT_FLAG(EMAC, EMAC_INTSTS_RXGDIF_Msk))
+    else if (u32INTSTS & EMAC_INTSTS_RXGDIF_Msk)
     {
-        EMAC_DISABLE_INT(EMAC, EMAC_INTEN_RXGDIEN_Msk);
-        EMAC_CLEAR_INT_FLAG(EMAC, EMAC_INTSTS_RXGDIF_Msk);
-        eth_device_ready(&psNuEmac->eth);
+        EMAC_CLEAR_INT_FLAG(EMAC, (EMAC_INTSTS_RXGDIF_Msk));
+        u32INTSTS &= ~EMAC_INTSTS_RXGDIF_Msk;
+
+        /* A good packet ready. */
+        eth_rx_push(psNuEmac);
     }
 
     /* Receive Bus Error Interrupt */
-    if (EMAC_GET_INT_FLAG(EMAC, EMAC_INTSTS_RXBEIF_Msk))
+    if (u32INTSTS & EMAC_INTSTS_RXBEIF_Msk)
     {
         NU_EMAC_TRACE("Reinit Rx EMAC\n");
-        EMAC_CLEAR_INT_FLAG(EMAC, EMAC_INTSTS_RXBEIF_Msk);
+        EMAC_CLEAR_INT_FLAG(EMAC, (EMAC_INTSTS_RXBEIF_Msk));
+        u32INTSTS &= ~EMAC_INTSTS_RXBEIF_Msk;
+
         nu_emac_reinit(psNuEmac);
     }
 
-    EMAC->INTSTS = status;
+    EMAC_CLEAR_INT_FLAG(EMAC, u32INTSTS);
 }
 
 static void nu_emac_tx_isr(int vector, void *param)
@@ -590,26 +525,25 @@ static void nu_emac_tx_isr(int vector, void *param)
     EMAC_T *EMAC = psNuEmac->memmgr.psEmac;
     rt_err_t result = RT_EOK;
 
-    unsigned int status = EMAC->INTSTS & 0xFFFF0000;
+    uint32_t u32INTSTS = EMAC->INTSTS & 0xFFFF0000;
 
     /* Wake-up suspended process to send */
-    if (EMAC_GET_INT_FLAG(EMAC, EMAC_INTSTS_TXCPIF_Msk))
+    if (u32INTSTS & EMAC_INTSTS_TXCPIF_Msk)
     {
-        EMAC_DISABLE_INT(EMAC, EMAC_INTEN_TXCPIEN_Msk);
-
-        result = rt_sem_release(&psNuEmac->eth_sem);
-        RT_ASSERT(result == RT_EOK);
+        EMAC_CLEAR_INT_FLAG(EMAC, (EMAC_INTSTS_TXCPIF_Msk));
+        u32INTSTS &= ~EMAC_INTSTS_TXCPIF_Msk;
     }
 
-    if (EMAC_GET_INT_FLAG(EMAC, EMAC_INTSTS_TXBEIF_Msk))
+    if (u32INTSTS & EMAC_INTSTS_TXBEIF_Msk)
     {
         NU_EMAC_TRACE("Reinit Tx EMAC\n");
+        EMAC_CLEAR_INT_FLAG(EMAC, (EMAC_INTSTS_TXBEIF_Msk));
+        u32INTSTS &= ~EMAC_INTSTS_TXBEIF_Msk;
+
         nu_emac_reinit(psNuEmac);
     }
-    else
-        EMAC_SendPktDone(&psNuEmac->memmgr);
 
-    EMAC->INTSTS = status;
+    EMAC_CLEAR_INT_FLAG(EMAC, u32INTSTS);
 }
 
 static int rt_hw_nu_emac_init(void)
@@ -637,7 +571,7 @@ static int rt_hw_nu_emac_init(void)
         psNuEMAC->eth.parent.write      = nu_emac_write;
         psNuEMAC->eth.parent.control    = nu_emac_control;
         psNuEMAC->eth.parent.user_data  = psNuEMAC;
-        psNuEMAC->eth.eth_rx            = nu_emac_rx;
+        psNuEMAC->eth.eth_rx            = RT_NULL;
         psNuEMAC->eth.eth_tx            = nu_emac_tx;
 
         snprintf(szTmp, sizeof(szTmp), "%s_tx", psNuEMAC->name);
@@ -647,9 +581,6 @@ static int rt_hw_nu_emac_init(void)
         snprintf(szTmp, sizeof(szTmp), "%s_rx", psNuEMAC->name);
         rt_hw_interrupt_install(psNuEMAC->irqn_rx, nu_emac_rx_isr, (void *)psNuEMAC, szTmp);
         rt_hw_interrupt_umask(psNuEMAC->irqn_rx);
-
-        /* Initial zero_copy rx pool */
-        memp_init_pool(psNuEMAC->memp_rx_pool);
 
         /* Register eth device */
         ret = eth_device_init(&psNuEMAC->eth, psNuEMAC->name);
@@ -667,7 +598,7 @@ int nu_emac_assign_mac_addr(EMAC_IDX evIdx, uint8_t *pu8MacAddr)
     return 0;
 }
 
-#if 0
+#if 1
 /*
     Remeber src += lwipiperf_SRCS in components\net\lwip\lwip-*\SConscript
 */

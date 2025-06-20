@@ -284,8 +284,6 @@ static void canutils(int argc, char **argv)
     }
 
 }
-#ifdef RT_USING_FINSH
-    MSH_CMD_EXPORT(canutils, can test function);
-#endif
+MSH_CMD_EXPORT(canutils, can test function);
 
 #endif
