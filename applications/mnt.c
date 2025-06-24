@@ -263,20 +263,22 @@ int filesystem_init(void)
         if (!psNorFlash)
         {
             rt_kprintf("Failed to create block device for %s.\n", PARTITION_NAME_FILESYSTEM);
+            goto exit_filesystem_init;
         }
 
         /* mount spi nor flash */
         if (dfs_mount(PARTITION_NAME_FILESYSTEM, MOUNT_POINT_SPIFLASH0, "elm", 0, RT_NULL) != 0)
         {
-            LOG_E("Failed to mount SPI NOR flash");
+            rt_kprintf("Failed to mount elm on %s.\n", MOUNT_POINT_SPIFLASH0);
+            rt_kprintf("Try to execute 'mkfs -t elm %s' first, then reboot.\n", PARTITION_NAME_FILESYSTEM);
             goto exit_filesystem_init;
         }
 
+        rt_kprintf("mount %s with elmfat type: ok\n", PARTITION_NAME_FILESYSTEM);
     }
 #endif
 
 exit_filesystem_init:
-
     return -result;
 }
 INIT_ENV_EXPORT(filesystem_init);
