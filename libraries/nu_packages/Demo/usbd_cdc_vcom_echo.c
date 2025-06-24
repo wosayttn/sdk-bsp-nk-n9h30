@@ -38,7 +38,7 @@ static void serial_thread_entry(void *parameter)
             if (rt_sem_take(&rx_sem, 3 * RT_TICK_PER_SECOND) == -RT_ETIMEOUT)
             {
                 /* output current tick */
-                rt_snprintf(szStr, sizeof(szStr), "%d\n", rt_tick_get());
+                rt_snprintf(szStr, sizeof(szStr), "%d\r\n", rt_tick_get());
                 rt_device_write(serial, 0, &szStr[0], rt_strlen(szStr));
                 continue;
             }

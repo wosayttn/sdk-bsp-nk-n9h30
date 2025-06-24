@@ -295,12 +295,6 @@
 
 /* u8g2: a monochrome graphic library */
 
-#define PKG_USING_WAVPLAYER
-#define PKG_WP_USING_PLAY
-#define PKG_WP_PLAY_DEVICE "sound0"
-#define PKG_WP_USING_RECORD
-#define PKG_WP_RECORD_DEVICE "sound0"
-#define PKG_USING_WAVPLAYER_LATEST_VERSION
 
 /* tools packages */
 
@@ -361,8 +355,6 @@
 
 /* entertainment: terminal games and other interesting software packages */
 
-#define PKG_USING_OPTPARSE
-#define PKG_USING_OPTPARSE_LATEST_VERSION
 
 /* Arduino libraries */
 
@@ -455,6 +447,7 @@
 #define BSP_LCD_BPP 16
 #define BSP_LCD_WIDTH 800
 #define BSP_LCD_HEIGHT 480
+#define BSP_USING_VPOST_OSD
 #define BSP_USING_USBD
 #define BSP_USING_USBH
 
@@ -478,6 +471,7 @@
 /* Nuvoton Packages Config */
 
 #define NU_PKG_USING_UTILS
+#define NU_PKG_USING_DEMO
 #define NU_PKG_USING_NAU8822
 #define NU_PKG_USING_ADC_TOUCH
 #define NU_PKG_USING_ADC_TOUCH_HW
