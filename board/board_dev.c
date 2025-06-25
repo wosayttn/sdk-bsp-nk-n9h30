@@ -321,7 +321,8 @@ void nu_lcd_backlight_on(void)
     if ((pwm_dev = (struct rt_device_pwm *)rt_device_find(PWM_DEV_NAME)) != RT_NULL)
     {
         rt_pwm_enable(pwm_dev, LCM_PWM_CHANNEL);
-        rt_pwm_set(pwm_dev, LCM_PWM_CHANNEL, 100000, 100);
+        rt_pwm_set(pwm_dev, LCM_PWM_CHANNEL, 100000, 1000);  // Duty: 1%, Bright
+        //rt_pwm_set(pwm_dev, LCM_PWM_CHANNEL, 100000, 20000); // Duty: 20%, Dark
     }
     else
     {
